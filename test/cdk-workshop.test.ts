@@ -1,17 +1,23 @@
 import * as cdk from 'aws-cdk-lib';
-import { Template, Match } from 'aws-cdk-lib/assertions';
-import * as CdkWorkshop from '../lib/cdk-workshop-stack';
+import * as lambda from 'aws-cdk-lib/aws-lambda';
+import { HitCounter } from '../lib/hit-counter';
+import { Template } from 'aws-cdk-lib/assertions';
 
-test('SQS Queue and SNS Topic Created', () => {
-  const app = new cdk.App();
-  // WHEN
-  const stack = new CdkWorkshop.CdkWorkshopStack(app, 'MyTestStack');
-  // THEN
+test('DynamoDB Table Created With Encryption', () => {
+    const stack = new cdk.Stack();
 
-  const template = Template.fromStack(stack);
+    new HitCounter(stack, 'MyTestConstruct', {
+        downstream: new lambda.Function(stack, 'TestFunction', {
+            runtime: lambda.Runtime.NODEJS_14_X,
+            handler: 'hello.handler',
+            code: lambda.Code.fromAsset('src')
+        })
+    });
 
-  template.hasResourceProperties('AWS::SQS::Queue', {
-    VisibilityTimeout: 300
-  });
-  template.resourceCountIs('AWS::SNS::Topic', 1);
+    const template = Template.fromStack(stack);
+    template.hasResourceProperties('AWS::DynamoDB::Table', {
+        SSESpecification: {
+            SSEEnabled: true,
+        },
+    });
 });
